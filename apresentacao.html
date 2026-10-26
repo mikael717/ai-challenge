@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Seguradora Horizonte — Tirar a IA do piloto</title>
+  <style>
+    :root {
+      --primary-dark: #0d3832;
+      --primary-dark-card: #15453f;
+      --teal-main: #0e7c86;
+      --teal-light: #e6f3f4;
+      --rust-accent: #c15338;
+      --rust-light: #fbeee9;
+      --bg-canvas: #091a18;
+      --bg-slide: #f8fafc;
+      --card-bg: #ffffff;
+      --card-border: #e2e8f0;
+      --text-dark: #1e293b;
+      --text-muted: #64748b;
+      --font-serif: "Georgia", "Cambria", serif;
+      --font-sans: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg-canvas);
+      color: var(--text-dark);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 15px;
+    }
+
+    /* Contêiner Proporcional 16:9 */
+    .deck-container {
+      width: 100%;
+      max-width: 1150px;
+      aspect-ratio: 16 / 9;
+      background: var(--bg-slide);
+      border-radius: 10px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+    }
+
+    .slide {
+      display: none;
+      width: 100%;
+      height: 100%;
+      padding: 35px 45px 25px;
+      flex-direction: column;
+      position: relative;
+      overflow-y: auto;
+    }
+
+    .slide.active { display: flex; }
+
+    .slide.dark-theme {
+      background-color: var(--primary-dark);
+      color: #ffffff;
+    }
+
+    /* Tipografia */
+    .slide-subtitle-tag {
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #5eead4;
+      margin-bottom: 6px;
+    }
+
+    .slide-title {
+      font-family: var(--font-serif);
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--primary-dark);
+      margin-bottom: 18px;
+      line-height: 1.25;
+    }
+
+    .dark-theme .slide-title { color: #ffffff; }
+
+    .slide-footer {
+      margin-top: auto;
+      padding-top: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      border-top: 1px solid rgba(0,0,0,0.08);
+    }
+
+    .dark-theme .slide-footer {
+      color: rgba(255, 255, 255, 0.45);
+      border-top-color: rgba(255, 255, 255, 0.12);
+    }
+
+    /* Layouts e Cards */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 15px 18px;
+    }
+
+    .dark-theme .card {
+      background: var(--primary-dark-card);
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+
+    .card h3 {
+      font-size: 0.98rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    ul.bullet-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      font-size: 0.82rem;
+      line-height: 1.35;
+    }
+
+    ul.bullet-list li {
+      position: relative;
+      padding-left: 14px;
+    }
+
+    ul.bullet-list li::before {
+      content: "•";
+      position: absolute;
+      left: 0;
+      color: var(--teal-main);
+      font-weight: bold;
+    }
+
+    .dark-theme ul.bullet-list li::before { color: #5eead4; }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 4px;
+    }
+    .dot.teal { background: var(--teal-main); }
+    .dot.green { background: #22c55e; }
+    .dot.red { background: var(--rust-accent); }
+    .dot.navy { background: #1e3a8a; }
+
+    /* Tabelas */
+    table.slide-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+      background: #ffffff;
+      border-radius: 6px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    table.slide-table th, table.slide-table td {
+      padding: 8px 10px;
+      text-align: left;
+      border-bottom: 1px solid #e9ecef;
+    }
+
+    table.slide-table th {
+      background: var(--primary-dark);
+      color: white;
+      font-weight: 600;
+    }
+
+    /* Fluxogramas */
+    .pipeline-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 10px 0 16px;
+    }
+
+    .pipe-step {
+      flex: 1;
+      padding: 10px 6px;
+      border-radius: 6px;
+      text-align: center;
+      color: white;
+      min-height: 75px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .pipe-step.gray { background: #475569; }
+    .pipe-step.rust { background: var(--rust-accent); }
+    .pipe-step.teal { background: var(--teal-main); }
+
+    .pipe-arrow { color: #94a3b8; font-weight: bold; font-size: 1.1rem; }
+
+    /* Controles de Navegação */
+    .nav-bar {
+      margin-top: 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: #94a3b8;
+      font-size: 0.85rem;
+    }
+
+    .nav-btn {
+      background: var(--primary-dark);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.25);
+      padding: 6px 14px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.15s;
+    }
+
+    .nav-btn:hover { background: var(--teal-main); }
+    select#slideJump {
+      background: #112a26;
+      color: white;
+      border: 1px solid rgba(255,255,255,0.2);
+      padding: 5px 8px;
+      border-radius: 5px;
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="deck-container" id="presentation">
+
+    <!-- SLIDE 1: Abertura -->
+    <section class="slide dark-theme active" data-slide="1">
+      <div class="slide-subtitle-tag">Case técnico • Business Partner de IA Sênior • Sinistros</div>
+      <h1 class="slide-title" style="font-size: 2.15rem; margin-top: 8px; margin-bottom: 25px;">
+        Tirar a IA do piloto: ganho mensurável em Sinistros, com risco sob controle
+      </h1>
+
+      <div class="grid-3" style="margin-top: 10px;">
+        <div class="card">
+          <div style="background: #f59e0b; color: #fff; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-bottom: 10px; font-size: 0.85rem;">1</div>
+          <h3 style="color: #fff;">Medir antes de automatizar</h3>
+          <p style="font-size: 0.82rem; color: #cbd5e1; line-height: 1.4;">
+            Baseline, log e grupo de controle antes de liberar qualquer decisão automática.
+          </p>
+        </div>
+
+        <div class="card">
+          <div style="background: #f59e0b; color: #fff; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-bottom: 10px; font-size: 0.85rem;">2</div>
+          <h3 style="color: #fff;">Regras inegociáveis fora do LLM</h3>
+          <p style="font-size: 0.82rem; color: #cbd5e1; line-height: 1.4;">
+            Prêmio, condutor principal, perfil e CNH em código determinístico, fail-closed.
+          </p>
+        </div>
+
+        <div class="card">
+          <div style="background: #f59e0b; color: #fff; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-bottom: 10px; font-size: 0.85rem;">3</div>
+          <h3 style="color: #fff;">Uma plataforma, não quatro projetos</h3>
+          <p style="font-size: 0.82rem; color: #cbd5e1; line-height: 1.4;">
+            Extração, regras, avaliação e log reaproveitados por Auto, Não-Auto e Vida.
+          </p>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <span>Seguradora Horizonte · empresa, números e relatos fictícios</span>
+        <span>1 / 12</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 2: QUATRO PEDIDOS -->
+    <section class="slide" data-slide="2">
+      <h2 class="slide-title">Quatro pedidos, quatro problemas reais</h2>
+      <div class="grid-2" style="gap: 14px;">
+        <div class="card">
+          <h3 style="color: var(--primary-dark);">Auto D0</h3>
+          <p style="font-size: 0.82rem; margin-bottom: 6px;"><strong>Pedem:</strong> oficializar o prompt e liberar "OK" sem analista.</p>
+          <p style="font-size: 0.82rem; color: #475569;"><strong>Real:</strong> falta baseline e log. "OK" sem analista é decisão de pagamento. Começar assistido e liberar por faixa.</p>
+        </div>
+        <div class="card">
+          <h3 style="color: var(--primary-dark);">Sindicância</h3>
+          <p style="font-size: 0.82rem; margin-bottom: 6px;"><strong>Pedem:</strong> "qual dos dois usar?"</p>
+          <p style="font-size: 0.82rem; color: #475569;"><strong>Real:</strong> falsa dicotomia. Falta medição justa, e o maior ganho está nos dados, não no prompt.</p>
+        </div>
+        <div class="card">
+          <h3 style="color: var(--primary-dark);">Não-Auto</h3>
+          <p style="font-size: 0.82rem; margin-bottom: 6px;"><strong>Pedem:</strong> agente de WhatsApp que paga vidro em minutos.</p>
+          <p style="font-size: 0.82rem; color: #475569;"><strong>Real:</strong> vidro tem ~1.150 casos/ano e custo de regulação estimado em R$ 144 mil/ano. A economia potencial (~R$ 115 mil/ano) não cobre sozinha o custo marginal; medir o ganho de prazo. Separadamente, analisar os ~450 avisos Não-Auto/mês encerrados na preliminar.</p>
+        </div>
+        <div class="card">
+          <h3 style="color: var(--primary-dark);">Vida</h3>
+          <p style="font-size: 0.82rem; margin-bottom: 6px;"><strong>Pedem:</strong> padronizar prompts e "distribuir sinistros com IA".</p>
+          <p style="font-size: 0.82rem; color: #475569;"><strong>Real:</strong> são dois problemas. Governança, sim; distribuição é otimização com regras, não IA.</p>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Seguradora Horizonte · Case BP de IA Sênior</span>
+        <span>2 / 12</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 3: O QUE PEDIRIA ANTES -->
+    <section class="slide" data-slide="3">
+      <h2 class="slide-title">O que pediria antes de propor qualquer solução</h2>
+      <div class="grid-3" style="gap: 16px;">
+        <div class="card">
+          <h3><span class="dot teal"></span> Decisões e rótulos</h3>
+          <ul class="bullet-list" style="margin-top: 8px;">
+            <li>50–100 sinistros já decididos, com o desfecho posterior</li>
+            <li>Onde estão os dados das regras inegociáveis</li>
+            <li>Como os 600 casos/mês são escolhidos hoje</li>
+            <li>O que significa "confirmado" na sindicância</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3><span class="dot green"></span> Dados e fontes</h3>
+          <ul class="bullet-list" style="margin-top: 8px;">
+            <li>Chaves entre emissão, cotação, assistência e sinistro</li>
+            <li>Data de disponibilidade de cada variável (vazamento)</li>
+            <li>Custo por consulta externa e política de cache</li>
+            <li>Inventário de prompts e agentes: quem, onde, versão</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3><span class="dot red"></span> Valor e risco</h3>
+          <ul class="bullet-list" style="margin-top: 8px;">
+            <li>Onde vão os 25 minutos da pré-análise manual</li>
+            <li>Perfil dos 30% encerrados na preliminar</li>
+            <li>Ticket médio, custo de sindicância e perda evitada</li>
+            <li>Taxa de reabertura e reclamações</li>
+          </ul>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Seguradora Horizonte · Case BP de IA Sênior</span>
+        <span>3 / 12</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 4: PORTFÓLIO PRIORIZADO -->
+    <section class="slide" data-slide="4">
+      <h2 class="slide-title">Portfólio priorizado por valor, viabilidade e risco</h2>
+      <div style="display: grid; grid-template-columns: 2.2fr 1fr; gap: 18px;">
+        <div>
+          <table class="slide-table">
+            <thead>
+              <tr>
+                <th>Iniciativa</th>
+                <th>Valor</th>
+                <th>Viab.</th>
+                <th>Baixo risco</th>
+                <th>Decisão</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Plataforma de pré-análise Auto D0</td>
+                <td>5</td>
+                <td>4</td>
+                <td>3</td>
+                <td><strong style="color: var(--teal-main);">Prioridade 1</strong></td>
+              </tr>
+              <tr>
+                <td>Modelo de sindicância v2</td>
+                <td>5</td>
+                <td>4</td>
+                <td>4</td>
+                <td><strong style="color: var(--teal-main);">Prioridade 1</strong></td>
+              </tr>
+              <tr>
+                <td>Governança de prompts (PromptOps)</td>
+                <td>4</td>
+                <td>5</td>
+                <td>5</td>
+                <td><strong>Habilitador</strong></td>
+              </tr>
+              <tr>
+                <td>Triagem Não-Auto assistida</td>
+                <td>3</td>
+                <td>3</td>
+                <td>4</td>
+                <td>Prioridade 2</td>
+              </tr>
+              <tr>
+                <td>Agente de vidro no WhatsApp</td>
+                <td>1</td>
+                <td>3</td>
+                <td>2</td>
+                <td><em>Piloto depois</em></td>
+              </tr>
+            </tbody>
+          </table>
+          <p style="font-size: 0.70rem; color: var(--text-muted); margin-top: 8px;">
+            Notas 1–5 por julgamento (a validar com dados). Critérios: valor em R$, viabilidade de dados, risco fraude/regulatório (5 = baixo), reuso pela plataforma.
+          </p>
+        </div>
+        <div class="card" style="background: var(--rust-light); border-color: #f3c2b4;">
+          <h3 style="color: var(--rust-accent); font-size: 0.95rem; margin-bottom: 10px;">Não resolver com IA</h3>
+          <ul class="bullet-list" style="font-size: 0.80rem;">
+            <li><strong>Regras inegociáveis:</strong> código determinístico.</li>
+            <li><strong>Distribuição de sinistros:</strong> otimização com restrições (carga, região, férias).</li>
+            <li><strong>Pagamento automático:</strong> sem controle antifraude.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Seguradora Horizonte · Case BP de IA Sênior</span>
+        <span>4 / 12</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 5: AUTO D0 EXIGE CAIXA -->
+    <section class="slide" data-slide="5">
+      <h2 class="slide-title">Auto D0 exige caixa; sindicância v2 pode valer mais</h2>
+      <div style="display: grid; grid-template-columns: 2fr 1.2fr; gap: 18px;">
+        <div>
+          <div class="grid-3" style="gap: 10px; margin-bottom: 10px;">
+            <div class="card" style="text-align: center; padding: 12px 8px;">
+              <div style="font-size: 1.6rem; font-weight: 800; color: var(--teal-main);">30 FTE</div>
+              <div style="font-size: 0.73rem; color: #64748b; margin-top: 2px;">capacidade liberada<br>(5,0 mil h/mês)</div>
+            </div>
+            <div class="card" style="text-align: center; padding: 12px 8px;">
+              <div style="font-size: 1.6rem; font-weight: 800; color: var(--primary-dark);">R$ 3,6 mi</div>
+              <div style="font-size: 0.73rem; color: #64748b; margin-top: 2px;">valor da capacidade<br>(R$ 60/h)</div>
+            </div>
+            <div class="card" style="text-align: center; padding: 12px 8px;">
+              <div style="font-size: 1.6rem; font-weight: 800; color: #2e7d32;">R$ 1,7 mi</div>
+              <div style="font-size: 0.73rem; color: #64748b; margin-top: 2px;">líquido anual<br>(exige 52% em caixa)</div>
+            </div>
+          </div>
+          <p style="font-size: 0.71rem; color: var(--text-muted); line-height: 1.3; margin-bottom: 10px;">
+            Premissas (base): 40% elegível ao fluxo direto, 10% auditado por amostra; assistido cai de 25 para 15 min; custo fixo R$ 1,5 mi/ano + R$ 1,5 por sinistro; ticket R$ 8 mil. Todas a validar.
+          </p>
+          <div class="card" style="background: #fef9e7; border-color: #f7dc6f; padding: 10px 12px;">
+            <strong style="font-size: 0.82rem; color: #7d6608;">Sindicância v2 e vidro:</strong>
+            <p style="font-size: 0.78rem; color: #566573; margin-top: 3px; line-height: 1.35;">
+              <strong>Sindicância v2:</strong> mesma equipe, confirmações dobram; ~R$ 2,5 mi/ano mesmo com metade do ganho e da perda evitada. <strong>Vidro:</strong> economia máxima de R$ 115 mil/ano, abaixo do custo marginal; o ganho é prazo.
+            </p>
+          </div>
+        </div>
+        <div class="card dark-theme" style="padding: 14px;">
+          <h3 style="color: #fff; font-size: 0.90rem; margin-bottom: 10px;">O que precisa ser verdade</h3>
+          <ul class="bullet-list" style="font-size: 0.79rem; gap: 9px;">
+            <li>Pelo menos 52% da capacidade vira caixa (vaga não reposta, terceiros) ou valor, como mais sindicância.</li>
+            <li>Pagamento indevido adicional do fluxo direto abaixo de ~0,2%.</li>
+            <li>Custo por sinistro de LLM, OCR e consultas sob controle.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Seguradora Horizonte · Case BP de IA Sênior</span>
+        <span>5 / 12</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 6: CAMADAS DE REGRAS -->
+    <section class="slide" data-slide="6">
+      <h2 class="slide-title">O LLM trabalha entre duas camadas de regras</h2>
+      <div class="pipeline-wrapper">
+        <div class="pipe-step gray">
+          <strong>Documentos</strong>
+          <span style="font-size: 0.68rem; opacity: 0.9;">OCR e layout, confiança por campo</span>
+        </div>
+        <div class="pipe-arrow">›</div>
+        <div class="pipe-step rust">
+          <strong>Regras (pré)</strong>
+          <span style="font-size: 0.68rem; opacity: 0.9;">Determinísticas, fail-closed</span>
+        </div>
+        <div class="pipe-arrow">›</div>
+        <div class="pipe-step teal">
+          <strong>Agente</strong>
+          <span style="font-size: 0.68rem; opacity: 0.9;">Um agente com ferramentas</span>
+        </div>
+        <div class="pipe-arrow">›</div>
+        <div class="pipe-step rust">
+          <strong>Regras (pós)</strong>
+          <span style="font-size: 0.68rem; opacity: 0.9;">Reconfere antes de qualquer OK</span>
+        </div>
+        <div class="pipe-arrow">›</div>
+        <div class="pipe-step teal">
+          <strong>Recomendação</strong>
+          <span style="font-size: 0.68rem; opacity: 0.9;">Com evidências citadas</span>
+        </div>
+        <div class="pipe-arrow">›</div>
+        <div class="pipe-step gray">
+          <strong>Analista ou direto</strong>
+          <span style="font-size: 0.68rem; opacity: 0.9;">Direto só em faixa liberada</span>
+        </div>
+      </div>
+      <div style="font-size: 0.72rem; color: #64748b; margin-bottom: 12px; text-align: center;">
+        Âmbar/terracota = código determinístico · teal = modelo de linguagem · cinza = entrada e saída
+      </div>
+      <div class="grid-3" style="gap: 12px;">
+        <div class="card">
+          <h4 style="font-size: 0.85rem; color: var(--primary-dark); margin-bottom: 5px;">Fontes do agente</h4>
+          <ul class="bullet-list" style="font-size: 0.77rem;">
+            <li>Apólice, cotação, assistência 24h</li>
+            <li>Externas (pagas): vazio ≠ limpo, vira "não verificado"</li>
+            <li>Condições gerais pela versão da data de contratação</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4 style="font-size: 0.85rem; color: var(--primary-dark); margin-bottom: 5px;">Papel do analista</h4>
+          <ul class="bullet-list" style="font-size: 0.77rem;">
+            <li>Assistido no início: vê a recomendação e o que falta</li>
+            <li>Fluxo direto só por faixa, com auditoria por amostra</li>
+            <li>Baixa confiança de leitura: revisão humana</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4 style="font-size: 0.85rem; color: var(--primary-dark); margin-bottom: 5px;">Rastreabilidade</h4>
+          <ul class="bullet-list" style="font-size: 0.77rem;">
+            <li>Log por execução: versão do prompt, modelo, fontes</li>
+            <li>Evidências citadas e regras disparadas</li>
+            <li>Decisão humana registrada para medir concordância</li>
+          </ul>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Seguradora Horizonte · Case BP de IA Sênior</span>
+        <span>6 / 12</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 7: GOVERNANÇA DE REGRAS E PROMPTS -->
+    <section class="slide" data-slide="7">
+      <h2 class="slide-title">Regras em código; prompts com dono, versão e teste</h2>
+      <div class="grid-2" style="gap: 18px;">
+        <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <h3 style="color: var(--rust-accent); font-size: 1rem;">O LLM nunca decide uma regra inegociável</h3>
+            <ul class="bullet-list" style="margin-top: 10px; font-size: 0.82rem;">
+              <li>Prêmio, condutor principal, perfil e CNH checados em código, antes e depois do modelo.</li>
+              <li>Um bloqueio não pode ser sobrescrito pela saída do LLM.</li>
+              <li>Dado ausente ou fonte fora do ar: bloqueia e escala, nunca assume OK.</li>
+              <li>Testes unitários, de contrato e adversariais; regra aprovada separada do prompt.</li>
+            </ul>
+          </div>
+          <p style="font-size: 0.78rem; font-style: italic; color: #64748b; margin-top: 14px; border-top: 1px dashed #cbd5e1; padding-top: 8px;">
+            Se a decisão final depende do texto do modelo, a regra não é inegociável.
+          </p>
+        </div>
+        <div class="card">
+          <h3 style="color: var(--teal-main); font-size: 1rem;">Governança: base comum + ramos</h3>
+          <div style="display: flex; flex-direction: column; align-items: center; margin: 10px 0;">
+            <div style="background: var(--primary-dark); color: white; padding: 5px 18px; border-radius: 4px; font-size: 0.78rem; font-weight: bold;">Base comum</div>
+            <div style="width: 2px; height: 8px; background: #94a3b8;"></div>
+            <div style="display: flex; gap: 8px;">
+              <div style="background: var(--teal-main); color: white; padding: 4px 12px; border-radius: 4px; font-size: 0.74rem;">Auto</div>
+              <div style="background: var(--teal-main); color: white; padding: 4px 12px; border-radius: 4px; font-size: 0.74rem;">Não-Auto</div>
+              <div style="background: var(--teal-main); color: white; padding: 4px 12px; border-radius: 4px; font-size: 0.74rem;">Vida</div>
+            </div>
+          </div>
+          <ul class="bullet-list" style="font-size: 0.80rem;">
+            <li>Repositório versionado; mudança na base exige Produto, IA e Risco.</li>
+            <li>Toda mudança passa por conjunto dourado e shadow mode.</li>
+            <li>Comparação de versões com intervalo de confiança; rollback em 1 passo.</li>
+            <li>Métricas: falso-OK, concordância, evidência correta, custo.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Seguradora Horizonte · Case BP de IA Sênior</span>
+        <span>7 / 12</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 8: VIDRO NO WHATSAPP -->
+    <section class="slide" data-slide="8">
+      <h2 class="slide-title">Vidro no WhatsApp: pagamento só por regra</h2>
+      <div style="display: flex; gap: 8px; margin-bottom: 14px;">
+        <div style="flex: 1; background: var(--teal-main); color: white; padding: 7px; border-radius: 4px; text-align: center; font-size: 0.80rem; font-weight: 600;">Aviso</div>
+        <div style="flex: 1.3; background: var(--teal-main); color: white; padding: 7px; border-radius: 4px; text-align: center; font-size: 0.80rem; font-weight: 600;">Identidade e apólice</div>
+        <div style="flex: 1.2; background: var(--teal-main); color: white; padding: 7px; border-radius: 4px; text-align: center; font-size: 0.80rem; font-weight: 600;">Fotos guiadas</div>
+        <div style="flex: 1.1; background: var(--teal-main); color: white; padding: 7px; border-radius: 4px; text-align: center; font-size: 0.80rem; font-weight: 600;">Checagens</div>
+        <div style="flex: 1.3; background: var(--rust-accent); color: white; padding: 7px; border-radius: 4px; text-align: center; font-size: 0.80rem; font-weight: 600;">Oferta e pagamento</div>
+      </div>
+      <table class="slide-table" style="font-size: 0.79rem;">
+        <thead>
+          <tr>
+            <th style="width: 32%;">Risco</th>
+            <th>Controle</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Imagem manipulada ou reaproveitada</strong></td>
+            <td>EXIF, hash perceptual, foto guiada, teto de valor, reincidência</td>
+          </tr>
+          <tr>
+            <td><strong>Prompt injection</strong></td>
+            <td>Texto e imagem do cliente são dado, nunca instrução; saída estruturada; permissão mínima</td>
+          </tr>
+          <tr>
+            <td><strong>Pagamento indevido</strong></td>
+            <td>Só por regra e tabela; segundo fator; auditoria humana por amostra</td>
+          </tr>
+          <tr>
+            <td><strong>LGPD</strong></td>
+            <td>Minimização, retenção curta, mascaramento antes do LLM, RIPD</td>
+          </tr>
+          <tr>
+            <td><strong>Reputação</strong></td>
+            <td>Escalada humana a qualquer momento; monitorar reclamações</td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="background: #f1f5f9; padding: 8px 12px; border-radius: 5px; font-size: 0.76rem; color: #475569; margin-top: 10px;">
+        <strong>Posição:</strong> piloto limitado (valor baixo, clientes elegíveis) depois que a plataforma existir, para reaproveitar extração, regras e log.
+      </div>
+      <div class="slide-footer">
+        <span>Seguradora Horizonte · Case BP de IA Sênior</span>
+        <span>8 / 12</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 9: PROMPT X ML (GRÁFICO) -->
+    <section class="slide" data-slide="9">
+      <h2 class="slide-title">Prompt × ML: os dados pesam mais que o prompt</h2>
+      <div class="grid-2" style="gap: 20px; align-items: start;">
+        <div>
+          <div style="font-size: 0.82rem; font-weight: 700; color: #334155; margin-bottom: 6px; text-align: center;">
+            Precisão no top 540 (simulação, teste)
+          </div>
+          <!-- Gráfico SVG Exato -->
+          <svg viewBox="0 0 420 220" style="width: 100%; height: auto; background: #fff; border-radius: 6px; border: 1px solid #e2e8f0;">
+            <line x1="40" y1="20" x2="40" y2="175" stroke="#cbd5e1" stroke-width="1" />
+            <line x1="40" y1="175" x2="400" y2="175" stroke="#cbd5e1" stroke-width="1" />
+
+            <!-- Legado 19.4% -->
+            <rect x="55" y="98" width="48" height="77" fill="#334155" rx="3" />
+            <text x="79" y="90" text-anchor="middle" font-size="11" font-weight="bold" fill="#334155">19,4%</text>
+            <text x="79" y="192" text-anchor="middle" font-size="9" fill="#64748b">Legado</text>
+
+            <!-- Prompt sozinho 10.9% -->
+            <rect x="125" y="132" width="48" height="43" fill="#475569" rx="3" />
+            <text x="149" y="124" text-anchor="middle" font-size="11" font-weight="bold" fill="#475569">10,9%</text>
+            <text x="149" y="192" text-anchor="middle" font-size="9" fill="#64748b">Prompt sozinho</text>
+
+            <!-- ML vars antigas 10.6% -->
+            <rect x="195" y="133" width="48" height="42" fill="#64748b" rx="3" />
+            <text x="219" y="125" text-anchor="middle" font-size="11" font-weight="bold" fill="#64748b">10,6%</text>
+            <text x="219" y="192" text-anchor="middle" font-size="9" fill="#64748b">ML vars antigas</text>
+
+            <!-- ML vars novas 38.1% -->
+            <rect x="265" y="24" width="48" height="151" fill="#0e7c86" rx="3" />
+            <text x="289" y="17" text-anchor="middle" font-size="11" font-weight="bold" fill="#0e7c86">38,1%</text>
+            <text x="289" y="192" text-anchor="middle" font-size="9" fill="#64748b">ML vars novas</text>
+
+            <!-- ML novas + prompt 39.9% -->
+            <rect x="335" y="17" width="48" height="158" fill="#f59e0b" rx="3" />
+            <text x="359" y="11" text-anchor="middle" font-size="11" font-weight="bold" fill="#f59e0b">39,9%</text>
+            <text x="359" y="192" text-anchor="middle" font-size="9" fill="#64748b">ML novas + prompt</text>
+          </svg>
+          <div style="font-size: 0.70rem; color: #94a3b8; font-style: italic; text-align: center; margin-top: 5px;">
+            Dados sintéticos: o que se leva é o protocolo, não o número.
+          </div>
+        </div>
+
+        <div>
+          <div class="card" style="margin-bottom: 10px;">
+            <h3 style="color: var(--primary-dark); font-size: 0.95rem;">Comparação justa</h3>
+            <ul class="bullet-list" style="font-size: 0.80rem; margin-top: 6px;">
+              <li><strong>Um fator muda por vez:</strong> mesmo teste, mesmo top 540, mesmo rótulo.</li>
+              <li><strong>Variáveis novas:</strong> +27,6 pp [IC +24,8; +30,6].</li>
+              <li><strong>Prompt como variável:</strong> +1,8 pp [+0,2; +3,1]; redundante, não agrega.</li>
+              <li><strong>Prompt sozinho:</strong> é pior que o legado (-8,5 pp).</li>
+            </ul>
+          </div>
+
+          <div class="card" style="background: #fef3c7; border-color: #fde68a;">
+            <p style="font-size: 0.80rem; font-weight: 600; color: #92400e; line-height: 1.35;">
+              Decide o ML com variáveis novas; o prompt entra só se o teste histórico mostrar ganho.
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Seguradora Horizonte · Case BP de IA Sênior</span>
+        <span>9 / 12</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 10: Capacidade É O GARGALO -->
+    <section class="slide" data-slide="10">
+      <h2 class="slide-title">Capacidade é o gargalo; medir exige auditoria</h2>
+      <div class="grid-2" style="gap: 18px; align-items: start;">
+        <div>
+          <div style="font-size: 0.78rem; font-weight: 700; color: #334155; margin-bottom: 6px; text-align: center;">
+            Valor líquido esperado vs. casos enviados pelo score
+          </div>
+          <!-- Curva SVG de Lucro Líquido -->
+          <svg viewBox="0 0 420 220" style="width: 100%; height: auto; background: #fff; border-radius: 6px; border: 1px solid #e2e8f0;">
+            <!-- Grid Lines -->
+            <line x1="45" y1="25" x2="400" y2="25" stroke="#f1f5f9" stroke-width="1" />
+            <line x1="45" y1="60" x2="400" y2="60" stroke="#f1f5f9" stroke-width="1" />
+            <line x1="45" y1="95" x2="400" y2="95" stroke="#f1f5f9" stroke-width="1" />
+            <line x1="45" y1="130" x2="400" y2="130" stroke="#f1f5f9" stroke-width="1" />
+            <line x1="45" y1="165" x2="400" y2="165" stroke="#f1f5f9" stroke-width="1" />
+
+            <!-- Eixos -->
+            <line x1="45" y1="20" x2="45" y2="175" stroke="#cbd5e1" stroke-width="1" />
+            <line x1="45" y1="175" x2="405" y2="175" stroke="#cbd5e1" stroke-width="1" />
+
+            <text x="38" y="30" text-anchor="end" font-size="9" fill="#94a3b8">1200</text>
+            <text x="38" y="65" text-anchor="end" font-size="9" fill="#94a3b8">1000</text>
+            <text x="38" y="100" text-anchor="end" font-size="9" fill="#94a3b8">800</text>
+            <text x="38" y="135" text-anchor="end" font-size="9" fill="#94a3b8">600</text>
+            <text x="38" y="170" text-anchor="end" font-size="9" fill="#94a3b8">400</text>
+
+            <!-- Curva -->
+            <path d="M 60 148 Q 110 90, 160 62 T 240 50 T 320 62 T 390 92" fill="none" stroke="#0e7c86" stroke-width="2.5" />
+
+            <!-- Pontos -->
+            <circle cx="60" cy="148" r="3.5" fill="#0e7c86" />
+            <circle cx="95" cy="115" r="3.5" fill="#0e7c86" />
+            <circle cx="130" cy="85" r="3.5" fill="#0e7c86" />
+            <circle cx="165" cy="68" r="3.5" fill="#0e7c86" />
+            <circle cx="200" cy="58" r="3.5" fill="#0e7c86" />
+            <circle cx="235" cy="52" r="3.5" fill="#0e7c86" />
+            <circle cx="270" cy="56" r="3.5" fill="#0e7c86" />
+            <circle cx="310" cy="62" r="3.5" fill="#0e7c86" />
+            <circle cx="350" cy="74" r="3.5" fill="#0e7c86" />
+            <circle cx="390" cy="92" r="3.5" fill="#0e7c86" />
+
+            <!-- X labels -->
+            <text x="60" y="190" text-anchor="middle" font-size="8" fill="#64748b">100</text>
+            <text x="130" y="190" text-anchor="middle" font-size="8" fill="#64748b">300</text>
+            <text x="200" y="190" text-anchor="middle" font-size="8" fill="#64748b">540</text>
+            <text x="270" y="190" text-anchor="middle" font-size="8" fill="#64748b">740</text>
+            <text x="350" y="190" text-anchor="middle" font-size="8" fill="#64748b">1200</text>
+            <text x="390" y="190" text-anchor="middle" font-size="8" fill="#64748b">1500</text>
+            <text x="225" y="206" text-anchor="middle" font-size="8" fill="#94a3b8">Casos enviados pelo score/mês (Capacidade = 540 + 60 auditados)</text>
+          </svg>
+          <div style="font-size: 0.68rem; color: #64748b; margin-top: 5px;">
+            Premissas: sindicância R$ 1,2 mil; perda evitada R$ 9 mil; os 60 auditados/mês sempre custeados.
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div class="card" style="padding: 10px 12px;">
+            <strong style="color: var(--primary-dark); font-size: 0.82rem;">Capacidade é o gargalo</strong>
+            <p style="font-size: 0.77rem; color: #475569; margin-top: 2px;">
+              Os últimos casos ainda acertam ~28% (equilíbrio: 15,7%). +100 casos/mês = +R$ 44 mil/mês.
+            </p>
+          </div>
+          <div class="card" style="padding: 10px 12px;">
+            <strong style="color: var(--primary-dark); font-size: 0.82rem;">Medir exige auditoria</strong>
+            <p style="font-size: 0.77rem; color: #475569; margin-top: 2px;">
+              Só com investigados, o legado "tem" 97% de recall (real: ~21%). A auditoria corrige; modelos se comparam por champion/challenger.
+            </p>
+          </div>
+          <div class="card" style="padding: 10px 12px;">
+            <strong style="color: var(--primary-dark); font-size: 0.82rem;">Vazamento e desbalanceamento</strong>
+            <p style="font-size: 0.77rem; color: #475569; margin-top: 2px;">
+              Laudo infla o PR-AUC de 0,48 para 0,71: só variáveis do D0. Sem SMOTE: balancear não muda a ordem e piora a calibração.
+            </p>
+          </div>
+          <div class="card" style="padding: 10px 12px;">
+            <strong style="color: var(--primary-dark); font-size: 0.82rem;">Monitorar</strong>
+            <p style="font-size: 0.77rem; color: #475569; margin-top: 2px;">
+              PSI do score (ação acima de 0,25), precisão nos investigados, recall pela auditoria, override.
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Seguradora Horizonte · Case BP de IA Sênior</span>
+        <span>10 / 12</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 11: KPIS EM QUATRO NÍVEIS -->
+    <section class="slide" data-slide="11">
+      <h2 class="slide-title">Medir: KPIs em quatro níveis e grupo de controle</h2>
+      <div class="grid-4" style="gap: 10px; margin-bottom: 14px;">
+        <div class="card">
+          <h3 style="font-size: 0.88rem;"><span class="dot teal"></span> Negócio</h3>
+          <ul class="bullet-list" style="font-size: 0.76rem; margin-top: 6px;">
+            <li>Perda evitada (R$)</li>
+            <li>Prazo médio de pagamento</li>
+            <li>Custo por sinistro</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3 style="font-size: 0.88rem;"><span class="dot green"></span> Operação</h3>
+          <ul class="bullet-list" style="font-size: 0.76rem; margin-top: 6px;">
+            <li>Horas liberadas</li>
+            <li>% em fluxo direto</li>
+            <li>Tempo de pré-análise</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3 style="font-size: 0.88rem;"><span class="dot red"></span> Qualidade</h3>
+          <ul class="bullet-list" style="font-size: 0.76rem; margin-top: 6px;">
+            <li>Falso-OK (principal)</li>
+            <li>Concordância com decisão final</li>
+            <li>Reaberturas e reclamações</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3 style="font-size: 0.88rem;"><span class="dot navy"></span> Modelo</h3>
+          <ul class="bullet-list" style="font-size: 0.76rem; margin-top: 6px;">
+            <li>Precisão@K e recall (amostra)</li>
+            <li>PSI e calibração</li>
+            <li>Taxa de override</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card dark-theme" style="padding: 14px 18px;">
+        <h3 style="color: #fff; font-size: 0.90rem; margin-bottom: 6px;">Como provar que o ganho veio da solução</h3>
+        <ul class="bullet-list" style="font-size: 0.79rem;">
+          <li><strong>Shadow mode primeiro:</strong> depois piloto escalonado por equipe ou região, com grupo de controle.</li>
+          <li><strong>Métricas, janela e critérios</strong> de sucesso congelados antes de começar.</li>
+          <li><strong>Primeiras análises:</strong> os 30% encerrados na preliminar, vidro, onde vão os 25 min, motivos de NÃO OK.</li>
+        </ul>
+      </div>
+      <div class="slide-footer">
+        <span>Seguradora Horizonte · Case BP de IA Sênior</span>
+        <span>11 / 12</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 12: ROADMAP -->
+    <section class="slide" data-slide="12">
+      <h2 class="slide-title">Roadmap: 90 dias para decidir, 12 meses para escalar</h2>
+      <div class="grid-3" style="gap: 12px; margin-bottom: 12px;">
+        <div class="card">
+          <div style="font-size: 0.72rem; font-weight: 700; color: var(--rust-accent); text-transform: uppercase;">0–30 dias</div>
+          <h3 style="font-size: 0.90rem; margin: 4px 0;">Baseline e fundação</h3>
+          <p style="font-size: 0.76rem; color: #475569;">Baseline, prompts, regras e log; teste das variáveis novas no histórico.</p>
+        </div>
+        <div class="card">
+          <div style="font-size: 0.72rem; font-weight: 700; color: var(--rust-accent); text-transform: uppercase;">31–60 dias</div>
+          <h3 style="font-size: 0.90rem; margin: 4px 0;">Shadow mode</h3>
+          <p style="font-size: 0.76rem; color: #475569;">Motor de regras, extração e agente; conjunto dourado; amostra auditada.</p>
+        </div>
+        <div class="card">
+          <div style="font-size: 0.72rem; font-weight: 700; color: var(--rust-accent); text-transform: uppercase;">61–90 dias</div>
+          <h3 style="font-size: 0.90rem; margin: 4px 0;">Assistido + decisão</h3>
+          <p style="font-size: 0.76rem; color: #475569;">1–2 equipes. Marco: seguir, ajustar ou encerrar, com critérios numéricos.</p>
+        </div>
+      </div>
+
+      <div style="background: #e2e8f0; padding: 7px 12px; border-radius: 5px; font-size: 0.74rem; color: #334155; margin-bottom: 12px;">
+        <strong>12 meses:</strong> assistido &rarr; fluxo direto por faixa (limite ~0,2%) &rarr; sindicância v2 em champion/challenger, ampliada com capacidade realocada &rarr; triagem Não-Auto &rarr; piloto de vidro &rarr; governança com Vida
+      </div>
+
+      <div class="grid-2" style="gap: 12px;">
+        <div class="card">
+          <h3 style="color: var(--primary-dark); font-size: 0.85rem;">Quem precisa estar na mesa</h3>
+          <p style="font-size: 0.76rem; color: #475569; line-height: 1.35;">
+            Sinistros (dono do valor), TI, Dados/MLOps, Segurança, Jurídico, Privacidade/DPO, Governança de IA e Risco, Atendimento, Auditoria.
+          </p>
+        </div>
+        <div class="card">
+          <h3 style="color: var(--primary-dark); font-size: 0.85rem;">Como evitar o piloto eterno</h3>
+          <p style="font-size: 0.76rem; color: #475569; line-height: 1.35;">
+            Dono de negócio com meta em R$; seguir/ajustar/encerrar definidos antes; orçamento de produção desde o início; plataforma única; desligar piloto sem tração.
+          </p>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Seguradora Horizonte · Case BP de IA Sênior</span>
+        <span>12 / 12</span>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Barra de Navegação -->
+  <div class="nav-bar">
+    <button class="nav-btn" id="prevBtn" onclick="mudaSlide(-1)">&#8592; Anterior</button>
+    <span>
+      Slide 
+      <select id="slideJump" onchange="irParaSlide(this.value)">
+        <option value="1">1 - Abertura</option>
+        <option value="2">2 - Quatro pedidos, quatro problemas</option>
+        <option value="3">3 - O que pediria antes</option>
+        <option value="4">4 - Portfólio priorizado</option>
+        <option value="5">5 - Auto D0 e sindicância v2</option>
+        <option value="6">6 - Camadas de regras</option>
+        <option value="7">7 - Governança de regras e prompts</option>
+        <option value="8">8 - Vidro no WhatsApp</option>
+        <option value="9">9 - Prompt × ML (comparativo)</option>
+        <option value="10">10 - Capacidade e auditoria</option>
+        <option value="11">11 - KPIs em quatro níveis</option>
+        <option value="12">12 - Roadmap (90 dias a 12 meses)</option>
+      </select>
+      de 12
+    </span>
+    <button class="nav-btn" id="nextBtn" onclick="mudaSlide(1)">Próximo &#8594;</button>
+  </div>
+
+  <script>
+    let slideAtual = 1;
+    const totalSlides = 12;
+    const slides = document.querySelectorAll('.slide');
+    const selector = document.getElementById('slideJump');
+
+    function exibeSlide(num) {
+      if (num < 1) num = 1;
+      if (num > totalSlides) num = totalSlides;
+      slideAtual = num;
+
+      slides.forEach(s => s.classList.remove('active'));
+      const ativo = document.querySelector(`.slide[data-slide="${num}"]`);
+      if (ativo) ativo.classList.add('active');
+
+      selector.value = num;
+    }
+
+    function mudaSlide(direcao) {
+      exibeSlide(slideAtual + direcao);
+    }
+
+    function irParaSlide(num) {
+      exibeSlide(parseInt(num, 10));
+    }
+
+    // Navegação por teclado (Setas Esquerda e Direita)
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') mudaSlide(-1);
+      if (e.key === 'ArrowRight' || e.key === ' ') mudaSlide(1);
+    });
+  </script>
+</body>
+</html>
